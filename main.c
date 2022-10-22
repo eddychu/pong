@@ -1,10 +1,9 @@
 
-#include <SDL.h>
-#include <SDL_ttf.h>
-#include <SDL_image.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_image.h>
 #include <stdio.h>
 #include <stdbool.h>
-#undef main
 
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 480
@@ -41,7 +40,7 @@ typedef struct State
     Ball ball;
 } State;
 
-void draw(State *state)
+void game_draw(State *state)
 {
     SDL_Rect left = {state->player1.x, state->player1.y, PADDLE_WIDTH, PADDLE_HEIGHT};
     SDL_Rect right = {state->player2.x, state->player2.y, PADDLE_WIDTH, PADDLE_HEIGHT};
@@ -69,7 +68,7 @@ void draw(State *state)
     SDL_DestroyTexture(texture);
 }
 
-bool init(State *state)
+bool game_init(State *state)
 {
     if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
     {
@@ -142,7 +141,7 @@ void respawn(State *state)
     state->ball.y = (SCREEN_HEIGHT - BALL_SIZE) / 2;
 }
 
-void update(State *state)
+void game_update(State *state)
 {
     const Uint8 *key_state = SDL_GetKeyboardState(NULL);
     if (key_state[SDL_SCANCODE_W])
@@ -164,7 +163,8 @@ void update(State *state)
     move_ball(&state->ball);
     if (is_collide(&state->player1, &state->ball))
     {
-        if(state->ball.x < state->player1.x + PADDLE_WIDTH) {
+        if (state->ball.x < state->player1.x + PADDLE_WIDTH)
+        {
             state->ball.x = state->player1.x + PADDLE_WIDTH;
         }
         state->ball.vx = -state->ball.vx;
@@ -172,7 +172,8 @@ void update(State *state)
     if (is_collide(&state->player2, &state->ball))
     {
 
-        if(state->ball.x > state->player2.x - PADDLE_WIDTH) {
+        if (state->ball.x > state->player2.x - PADDLE_WIDTH)
+        {
             state->ball.x = state->player2.x - PADDLE_WIDTH;
         }
         state->ball.vx = -state->ball.vx;
@@ -198,7 +199,18 @@ void update(State *state)
     }
 }
 
-void run(State *state)
+void game_shutdown(State *state)
+{
+    TTF_CloseFont(state->font);
+    SDL_DestroyRenderer(state->renderer);
+    SDL_DestroyWindow(state->window);
+    SDL_Quit();
+    state->font = NULL;
+    state->renderer = NULL;
+    state->window = NULL;
+}
+
+void game_run(State *state)
 {
     bool running = true;
     Uint32 start = SDL_GetTicks();
@@ -209,38 +221,32 @@ void run(State *state)
             if (state->event.type == SDL_QUIT)
             {
                 running = false;
+                break;
             }
         }
         Uint32 delta = SDL_GetTicks() - start;
         if (delta > 300)
         {
-            update(state);
+            game_update(state);
             SDL_Renderer *renderer = state->renderer;
             SDL_SetRenderDrawColor(renderer, BLACK.r, BLACK.g, BLACK.b, BLACK.a);
             SDL_RenderClear(renderer);
-            draw(state);
+            game_draw(state);
             SDL_RenderPresent(renderer);
         }
     }
+    game_shutdown(state);
 }
 
-void shutdown(State *state)
-{
-    SDL_DestroyRenderer(state->renderer);
-    SDL_DestroyWindow(state->window);
-    state->renderer = NULL;
-    state->window = NULL;
-    SDL_Quit();
-}
+
 
 int main(int argc, char **argv)
 {
     State state = {NULL, NULL};
 
-    if (init(&state))
+    if (game_init(&state))
     {
-        run(&state);
-        shutdown(&state);
+        game_run(&state);
     }
     return EXIT_SUCCESS;
 }
